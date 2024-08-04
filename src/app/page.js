@@ -1,94 +1,149 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from 'react';
 import styles from "./page.module.css";
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [errorAlert, setErrorAlert] = useState(false);
+
+  const handleErrorAlertClose = () => {
+    setErrorAlert(false);
+  };
+
+  // Check whether token is already available in localStorage
+  const handleClickOpen = () => {
+    const token = localStorage.getItem('jwtToken');
+    if (token) {
+      router.push('/moderator');
+    } else {
+      setOpen(true);
+    }
+  }
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  // Post credentials to /auth endpoint and get access token
+  const handleAuthSubmit = async () => {
+    try {
+      const response = await fetch(`http://${process.env.moderator_service_url}moderator/auth/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email, password: password }),
+      });
+
+      const data = await response.json();
+
+      if (data.accessToken) {
+        localStorage.setItem('jwtToken', data.accessToken);
+        router.push('/moderator');
+      } else {
+        setErrorAlert(true);
+      }
+    } catch (error) {
+      setErrorAlert(true);
+    }
+
+    handleClose();
+  };
+
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
       <div className={styles.grid}>
         <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="/submitJokes"
           className={styles.card}
-          target="_blank"
           rel="noopener noreferrer"
         >
           <h2>
-            Docs <span>-&gt;</span>
+            Submit Joke <span>-&gt;</span>
           </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
+          <p>Submit a joke which you think funny</p>
         </a>
 
         <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="/viewJokes"
           className={styles.card}
-          target="_blank"
           rel="noopener noreferrer"
         >
           <h2>
-            Learn <span>-&gt;</span>
+            View Jokes <span>-&gt;</span>
           </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
+          <p>Get a random joke based in the type</p>
         </a>
 
         <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="#"
           className={styles.card}
-          target="_blank"
           rel="noopener noreferrer"
+          onClick={handleClickOpen}
         >
           <h2>
-            Templates <span>-&gt;</span>
+            Moderator <span>-&gt;</span>
           </h2>
-          <p>Explore starter templates for Next.js.</p>
+          <p>Review the jokes submit by users</p>
         </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Dialog
+          open={open}
+          onClose={handleClose}
         >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+          <DialogTitle>Login</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Login to moderator dashboard
+            </DialogContentText>
+            <TextField
+              autoFocus
+              required
+              margin="dense"
+              label="Email Address"
+              fullWidth
+              variant="standard"
+              onChange={(event) => { setEmail(event.target.value) }}
+            />
+            <TextField
+              autoFocus
+              required
+              type='password'
+              margin="dense"
+              label="Password"
+              fullWidth
+              variant="standard"
+              onChange={(event) => { setPassword(event.target.value) }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleAuthSubmit}>Login</Button>
+          </DialogActions>
+        </Dialog>
+        <Snackbar open={errorAlert} autoHideDuration={3000} onClose={handleErrorAlertClose}>
+          <Alert
+            severity="error"
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            Authentication failed
+          </Alert>
+        </Snackbar>
       </div>
     </main>
   );
